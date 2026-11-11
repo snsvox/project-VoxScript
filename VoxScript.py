@@ -1,4 +1,5 @@
 import math
+from altair import condition
 from colorama import Fore,Back,Style,init
 import sys
 import signal
@@ -6,6 +7,12 @@ import os
 import webbrowser
 import threading
 import time
+import pyfiglet
+import requests
+
+voxscript = pyfiglet.Figlet('standard')
+
+t = time.localtime()
 
 class CommandError(Exception):
     pass
@@ -23,6 +30,10 @@ def clear():
 
 clear()
 
+print(Fore.CYAN + voxscript.renderText("Ran in VoxScript"))
+print(Fore.GREEN + f">>> VoxScript Initialization Complete, to remove this watermark completely, open VoxScript.py, no need to pay")
+print(Fore.YELLOW + ">>> File Ran in:", os.getcwdb(), '\n')
+
 def exit_error(error,type_of_error,reason):
     if error == 1:
         type = type_of_error
@@ -34,7 +45,7 @@ def exit_error(error,type_of_error,reason):
         raise SyntaxError("Invaild type of trigger. Did you mean 0 (0 does not trigger) or 1 (1 triggers the error as long as there is the reason why)")
 
 
-log = lambda *args: print(*args)
+log1 = lambda *args: print(*args)
 
 def exit(trigger):
     if trigger == 0:
@@ -105,11 +116,8 @@ def console_command(command,text):
         console_write("/help_advanced: Displays this advanced help message")
         console_write("/help: Displays all available commands")
 
-def i():
-    pass
-
-def o():
-    pass
+i = True
+o = False
 
 trigger = 0
 
@@ -154,7 +162,7 @@ def debug_start():
 def py_function(*args):
     args
 
-def var(name,value):
+def var(name,value=0):
     globals()[name] = value
 
 class ReplaceError(Exception):
@@ -168,11 +176,164 @@ def replace(var,new_value):
     except Exception as e:
         raise ReplaceError(f"Failed to replace variable '{var}' with new value '{new_value}': {e}")
 
-def define(name,*args):
-    def name():
-        for func in args:
-            func()
-    globals()[name] = name
-
 def console_write(*args):
-    log(*args)
+    try:
+        log1(*args)
+    except NameError as e:
+        print(f"{args} is not defined! Error: {e}")
+
+def verify_var(name):
+    if name not in globals():
+        console_write(f"Variable: '{name}' is not defined!")
+    else:
+        console_write(f"Variable: '{name}' is defined!, Value: {globals()[name]}")
+
+def calc(args,write=False):
+    if not any(op in args for op in ['-', '+', '*', '/', '%', '**', '//']) or 'math' in args:
+        raise SyntaxError(f"'calc' function does not calculate {args}. If this is a mistake (like sin() in math), then use the function since math is imported instead")
+    else:
+        try:
+            result = eval(args)
+            if write:
+                float(console_write(result))
+            return result
+        except Exception as e:
+            console_write(f"Error calculating expression '{args}': {e}")
+
+def sin(x):
+    return math.sin(x)
+
+def cos(x):
+    return math.cos(x)
+
+def tan(x):
+    return math.tan(x)
+
+def exp(x):
+    return math.exp(x)
+
+def sqrt(x):
+    return math.sqrt(x)
+
+
+def os_check(write=False):
+    if write:
+        console_write(f"Operating System: {'linux' if os.name == 'posix' else 'windows' if os.name == 'nt' else 'undefined'}")
+    elif not write:
+        return os.name
+    else:
+        raise NameError("func: os_check is called with an invalid argument, did you mean True or False?")
+
+log2 = lambda *args: input(f"{args[0]}")
+
+def prompt_ask(*args,arrow=False,SPACE=False):
+    if not arrow:
+        return log2(f"{args[0]} " if SPACE else f"{args[0]}")
+    else:
+        log(f"{args[0]}")
+        return input(">>> ")
+
+logger = ""
+    
+def log(*args):
+    global logger
+    logger += f"{args[0]} \n"
+
+def log_clear(start=False):
+    global logger
+    if start:
+        logger = ""
+    else:
+        pass
+
+class LogError(Exception):
+    pass
+
+def log_save(filename,status=False):
+    if not status:
+        pass
+    else:
+        console_write(f"Log saving as {filename}")
+    global logger
+    try:
+        with open(filename, 'w') as f:
+            f.write(logger)
+
+    except Exception as e:
+        raise LogError(f"Failed to save log: '{filename}'. Error: {e}")
+
+def exit():
+    raise SystemExit
+
+def terminal_command(command):
+    if not command.startswith('/'):
+        raise CommandError(f"Commands start with '/' not {command.startswith('/' if not command.startswith('/') else command)}")
+    else:
+        command = command.removeprefix('/')
+        eval(command)
+
+
+class FileError(Exception):
+    pass
+
+class file:
+    def __init__(self,name):
+        self.name = name
+
+    def overwrite(filename,*args):
+        os.remove(filename)
+        with open(filename,'w') as f:
+            f.write(args)
+
+    def file_read(filename,write=False):
+        try:
+            with open(filename, 'r') as f:
+                content = f.read()
+                if write:
+                    console_write(content)
+                return content
+        except Exception as e:
+            raise LogError(f"Failed to read log: '{filename}'. Error: {e}")
+
+    def delete(filename):
+        os.remove(filename)
+
+    def make(filename,*args):
+        with open(filename,'w') as f:
+            f.write(*args)
+
+class ComputerError(Exception):
+    pass
+
+class computer:
+    def __init__(self,name):
+        self.name = name
+
+    def scannow():
+        if os.name == 'nt':
+            import ctypes
+            globals()[my_command] = 'sfc /scannow'
+            ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", my_commands, None, 1)
+        else:
+            raise ComputerError(f"Your OS is linux and sfc can only be ran in windows")
+
+    #not much here since idk give me ideas
+
+class code:
+    def __init__(self,name):
+        self.name = name
+
+    def call(variable):
+        if variable in globals():
+            return f'Variable: "{variable}" found as value: {globals()[variable]}'
+        else:
+            raise NameError(f'Variable: "{variable}" is not defined!')
+
+class py:
+    def __init__(self,name):
+        self.name = name
+
+    def run(filename):
+                with open(filename,'rb') as f:
+                    content = f.read()
+                    exec(content)
